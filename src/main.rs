@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use std::default;
+// use std::default;
 
 use ncurses::*;
 const REGULAR_PAIR: i16 = 0;
@@ -72,6 +72,17 @@ impl Focus {
     }
 }
 
+fn list_up(_list: &Vec<String>, list_curr: &mut usize) {
+    if *list_curr > 0 {
+        *list_curr -= 1;
+    }
+}
+fn list_down(list: &Vec<String>, list_curr: &mut usize) {
+    if *list_curr + 1 < list.len() {
+        *list_curr += 1;
+    }
+}
+
 fn main() {
     initscr();
     noecho();
@@ -114,7 +125,7 @@ fn main() {
                     ui.label("Done: ", REGULAR_PAIR);
                     ui.begin_list(done_curr);
                     for (index, done) in dones.iter().enumerate() {
-                        ui.list_element(&format!("- [x] {done}"), index + 1);
+                        ui.list_element(&format!("- [x] {done}"), index);
                     }
                     ui.end_list();
                 }
@@ -127,21 +138,26 @@ fn main() {
         let key = getch();
         match key as u8 as char {
             'q' => quit = true,
-            'w' => {
-                if todo_curr > 0 {
-                    todo_curr -= 1;
+            'w' => match focus {
+                Focus::Todo => list_up(&todos, &mut todo_curr),
+                Focus::Done => list_up(&dones, &mut done_curr),
+            },
+            's' => match focus {
+                Focus::Todo => list_down(&todos, &mut todo_curr),
+                Focus::Done => list_down(&dones, &mut done_curr),
+            },
+            '\n' => match focus {
+                Focus::Todo => {
+                    if todo_curr < todos.len() {
+                        dones.push(todos.remove(todo_curr));
+                    }
                 }
-            }
-            's' => {
-                if todo_curr + 1 < todos.len() {
-                    todo_curr += 1;
+                Focus::Done => {
+                    if done_curr < dones.len() {
+                        todos.push(dones.remove(done_curr));
+                    }
                 }
-            }
-            '\n' => {
-                if todo_curr < todos.len() {
-                    dones.push(todos.remove(todo_curr));
-                }
-            }
+            },
             '\t' => focus = focus.toggle(),
             _ => {}
         }
