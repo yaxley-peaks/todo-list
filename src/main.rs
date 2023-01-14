@@ -58,6 +58,20 @@ impl Ui {
     }
 }
 
+enum Focus {
+    Todo,
+    Done,
+}
+
+impl Focus {
+    fn toggle(&self) -> Self {
+        match self {
+            Focus::Todo => Focus::Done,
+            Focus::Done => Focus::Todo,
+        }
+    }
+}
+
 fn main() {
     initscr();
     noecho();
@@ -74,30 +88,39 @@ fn main() {
         "Learn rust".to_string(),
         "Get 1 egg".to_string(),
     ];
-    let mut todo_curr: usize = 1;
+    let mut todo_curr: usize = 0;
     let mut dones = vec![
         "Wake up".to_string(),
         "Cry".to_string(),
         "Kill Myself".to_string(),
     ];
-    let mut done_curr = 0usize;
-
+    let mut done_curr = 1usize;
+    let mut focus = Focus::Todo;
     let mut ui = Ui::default();
     while !quit {
         erase();
         ui.begin(1, 1);
         {
-            ui.begin_list(todo_curr);
-            for (index, todo) in todos.iter().enumerate() {
-                ui.list_element(&format!("- [ ] {todo}"), index);
+            match focus {
+                Focus::Todo => {
+                    ui.label("Left to do: ", REGULAR_PAIR);
+                    ui.begin_list(todo_curr);
+                    for (index, todo) in todos.iter().enumerate() {
+                        ui.list_element(&format!("- [ ] {todo}"), index);
+                    }
+                    ui.end_list();
+                }
+                Focus::Done => {
+                    ui.label("Done: ", REGULAR_PAIR);
+                    ui.begin_list(done_curr);
+                    for (index, done) in dones.iter().enumerate() {
+                        ui.list_element(&format!("- [x] {done}"), index + 1);
+                    }
+                    ui.end_list();
+                }
             }
-            ui.end_list();
-            ui.label("--------------------------", REGULAR_PAIR);
-            ui.begin_list(0);
-            for (index, done) in dones.iter().enumerate() {
-                ui.list_element(&format!("- [x] {done}"), index + 1);
-            }
-            ui.end_list();
+
+            // ui.label("--------------------------", REGULAR_PAIR);
         }
         ui.end();
 
@@ -109,14 +132,17 @@ fn main() {
                     todo_curr -= 1;
                 }
             }
-            's' => if todo_curr + 1 < todos.len() {
-                todo_curr += 1;
-            },
+            's' => {
+                if todo_curr + 1 < todos.len() {
+                    todo_curr += 1;
+                }
+            }
             '\n' => {
                 if todo_curr < todos.len() {
                     dones.push(todos.remove(todo_curr));
                 }
-            },
+            }
+            '\t' => focus = focus.toggle(),
             _ => {}
         }
     }
