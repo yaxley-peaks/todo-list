@@ -1,4 +1,4 @@
-#![allow(unused)]
+// #![allow(dead_code)]
 
 // use std::default;
 
@@ -10,7 +10,6 @@ type Id = usize;
 
 #[derive(Default)]
 struct Ui {
-    key: Option<i32>,
     list_curr: Option<Id>,
     row: usize,
     col: usize,
@@ -72,10 +71,8 @@ impl Focus {
     }
 }
 
-fn list_up(_list: &Vec<String>, list_curr: &mut usize) {
-    if *list_curr > 0 {
-        *list_curr -= 1;
-    }
+fn list_up(_list: &[String], list_curr: &mut usize) {
+    *list_curr = list_curr.saturating_sub(1);
 }
 fn list_down(list: &Vec<String>, list_curr: &mut usize) {
     if *list_curr + 1 < list.len() {
@@ -114,7 +111,8 @@ fn main() {
         {
             match focus {
                 Focus::Todo => {
-                    ui.label("Left to do: ", REGULAR_PAIR);
+                    ui.label("[TODO] DONE ", REGULAR_PAIR);
+                    ui.label("-------------", REGULAR_PAIR);
                     ui.begin_list(todo_curr);
                     for (index, todo) in todos.iter().enumerate() {
                         ui.list_element(&format!("- [ ] {todo}"), index);
@@ -122,7 +120,8 @@ fn main() {
                     ui.end_list();
                 }
                 Focus::Done => {
-                    ui.label("Done: ", REGULAR_PAIR);
+                    ui.label(" TODO [DONE]", REGULAR_PAIR);
+                    ui.label("-------------", REGULAR_PAIR);
                     ui.begin_list(done_curr);
                     for (index, done) in dones.iter().enumerate() {
                         ui.list_element(&format!("- [x] {done}"), index);
@@ -150,11 +149,17 @@ fn main() {
                 Focus::Todo => {
                     if todo_curr < todos.len() {
                         dones.push(todos.remove(todo_curr));
+                        if todo_curr >= todos.len() && todo_curr > 0 {
+                            todo_curr = todos.len() - 1;
+                        }
                     }
                 }
                 Focus::Done => {
                     if done_curr < dones.len() {
                         todos.push(dones.remove(done_curr));
+                    }
+                    if done_curr >= dones.len() && done_curr > 0 {
+                        done_curr = dones.len() - 1;
                     }
                 }
             },
