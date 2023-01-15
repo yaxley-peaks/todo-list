@@ -88,11 +88,11 @@ fn list_down(list: &Vec<String>, list_curr: &mut usize) {
 fn parse_item(line: &str) -> Option<(Status, &str)> {
     let todo_pre = "TODO: ";
     let done_pre = "DONE: ";
-    if line.starts_with(todo_pre) {
-        return Some((Status::Todo, &line[todo_pre.len()..]));
+    if let Some(stripped) = line.strip_prefix(todo_pre) {
+        return Some((Status::Todo, stripped));
     }
-    if line.starts_with(done_pre) {
-        return Some((Status::Done, &line[done_pre.len()..]));
+    if let Some(stripped) = line.strip_prefix(done_pre) {
+        return Some((Status::Done, stripped));
     }
     None
 }
