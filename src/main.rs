@@ -3,8 +3,10 @@
 // use std::default;
 
 use ncurses::*;
-use std::fs::File;
+use std::env;
+use std::fs::{read_to_string, File};
 use std::io::Write;
+use std::process::exit;
 const REGULAR_PAIR: i16 = 0;
 const HIGHLIGHT_PAIR: i16 = 1;
 
@@ -59,6 +61,7 @@ impl Ui {
     }
 }
 
+#[derive(Debug)]
 enum Status {
     Todo,
     Done,
@@ -83,10 +86,42 @@ fn list_down(list: &Vec<String>, list_curr: &mut usize) {
 }
 
 fn parse_item(line: &str) -> Option<(Status, &str)> {
+    let todo_pre = "TODO: ";
+    let done_pre = "DONE: ";
+    if line.starts_with(todo_pre) {
+        return Some((Status::Todo, &line[todo_pre.len()..]));
+    }
+    if line.starts_with(done_pre) {
+        return Some((Status::Done, &line[done_pre.len()..]));
+    }
     None
 }
 
 fn main() {
+    let mut todos = Vec::<String>::new();
+    let mut todo_curr: usize = 0;
+    let mut dones = Vec::<String>::new();
+    let mut done_curr = 1usize;
+    let mut focus = Status::Todo;
+    let mut args = env::args();
+    args.next().unwrap();
+
+    let file_path = match args.next() {
+        Some(fp) => fp,
+        None => {
+            eprintln!("ERROR: File path not provided");
+            exit(1);
+        }
+    };
+
+    for line in read_to_string(file_path).unwrap().lines() {
+        match parse_item(line) {
+            Some((Status::Todo, title)) => todos.push(title.to_owned()),
+            Some((Status::Done, title)) => dones.push(title.to_owned()),
+            None => {}
+        }
+    }
+
     initscr();
     noecho();
     curs_set(CURSOR_VISIBILITY::CURSOR_INVISIBLE);
@@ -97,19 +132,7 @@ fn main() {
     refresh();
 
     let mut quit = false;
-    let mut todos = vec![
-        "Write app".to_string(),
-        "Learn rust".to_string(),
-        "Get 1 egg".to_string(),
-    ];
-    let mut todo_curr: usize = 0;
-    let mut dones = vec![
-        "Wake up".to_string(),
-        "Cry".to_string(),
-        "Kill Myself".to_string(),
-    ];
-    let mut done_curr = 1usize;
-    let mut focus = Status::Todo;
+
     let mut ui = Ui::default();
     while !quit {
         erase();
@@ -135,7 +158,6 @@ fn main() {
                     ui.end_list();
                 }
             }
-
         }
         ui.end();
 
