@@ -3,6 +3,8 @@
 // use std::default;
 
 use ncurses::*;
+use std::fs::File;
+use std::io::Write;
 const REGULAR_PAIR: i16 = 0;
 const HIGHLIGHT_PAIR: i16 = 1;
 
@@ -57,16 +59,16 @@ impl Ui {
     }
 }
 
-enum Focus {
+enum Status {
     Todo,
     Done,
 }
 
-impl Focus {
+impl Status {
     fn toggle(&self) -> Self {
         match self {
-            Focus::Todo => Focus::Done,
-            Focus::Done => Focus::Todo,
+            Status::Todo => Status::Done,
+            Status::Done => Status::Todo,
         }
     }
 }
@@ -78,6 +80,10 @@ fn list_down(list: &Vec<String>, list_curr: &mut usize) {
     if *list_curr + 1 < list.len() {
         *list_curr += 1;
     }
+}
+
+fn parse_item(line: &str) -> Option<(Status, &str)> {
+    None
 }
 
 fn main() {
@@ -103,15 +109,15 @@ fn main() {
         "Kill Myself".to_string(),
     ];
     let mut done_curr = 1usize;
-    let mut focus = Focus::Todo;
+    let mut focus = Status::Todo;
     let mut ui = Ui::default();
     while !quit {
         erase();
         ui.begin(1, 1);
         {
             match focus {
-                Focus::Todo => {
-                    ui.label("[TODO] DONE ", REGULAR_PAIR);
+                Status::Todo => {
+                    ui.label("[TODO] DONE  <tab>", REGULAR_PAIR);
                     ui.label("-------------", REGULAR_PAIR);
                     ui.begin_list(todo_curr);
                     for (index, todo) in todos.iter().enumerate() {
@@ -119,8 +125,8 @@ fn main() {
                     }
                     ui.end_list();
                 }
-                Focus::Done => {
-                    ui.label(" TODO [DONE]", REGULAR_PAIR);
+                Status::Done => {
+                    ui.label(" TODO [DONE] <tab>", REGULAR_PAIR);
                     ui.label("-------------", REGULAR_PAIR);
                     ui.begin_list(done_curr);
                     for (index, done) in dones.iter().enumerate() {
@@ -130,23 +136,31 @@ fn main() {
                 }
             }
 
-            // ui.label("--------------------------", REGULAR_PAIR);
         }
         ui.end();
 
         let key = getch();
         match key as u8 as char {
             'q' => quit = true,
+            'e' => {
+                let mut file = File::create("TODO").unwrap();
+                todos.iter().for_each(|todo| {
+                    writeln!(file, "TODO: {todo}").unwrap();
+                });
+                dones.iter().for_each(|done| {
+                    writeln!(file, "DONE: {done}").unwrap();
+                });
+            }
             'w' => match focus {
-                Focus::Todo => list_up(&todos, &mut todo_curr),
-                Focus::Done => list_up(&dones, &mut done_curr),
+                Status::Todo => list_up(&todos, &mut todo_curr),
+                Status::Done => list_up(&dones, &mut done_curr),
             },
             's' => match focus {
-                Focus::Todo => list_down(&todos, &mut todo_curr),
-                Focus::Done => list_down(&dones, &mut done_curr),
+                Status::Todo => list_down(&todos, &mut todo_curr),
+                Status::Done => list_down(&dones, &mut done_curr),
             },
             '\n' => match focus {
-                Focus::Todo => {
+                Status::Todo => {
                     if todo_curr < todos.len() {
                         dones.push(todos.remove(todo_curr));
                         if todo_curr >= todos.len() && todo_curr > 0 {
@@ -154,7 +168,7 @@ fn main() {
                         }
                     }
                 }
-                Focus::Done => {
+                Status::Done => {
                     if done_curr < dones.len() {
                         todos.push(dones.remove(done_curr));
                     }
